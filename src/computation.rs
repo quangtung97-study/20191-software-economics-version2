@@ -255,7 +255,7 @@ pub fn da_NP(input: &Input, m: Retailer, j: Product) -> f64 {
 
 pub fn da_NP_approx(input: &Input, m: Retailer, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
-    let delta = 0.01;
+    let delta = 0.001;
     rrgame.parameter.a_mg[m][j] += delta;
 
     let new_input = Input {
@@ -264,6 +264,19 @@ pub fn da_NP_approx(input: &Input, m: Retailer, j: Product) -> f64 {
     };
 
     (NP(&new_input, m) - NP(input, m)) / delta
+}
+
+pub fn dpdp_NP(input: &Input, m: Retailer, j: Product, k: Product) -> f64 {
+    let mut rrgame = input.rrgame.clone();
+    let delta = 0.0001;
+    rrgame.parameter.p_mg[m][k] += delta;
+
+    let new_input = Input {
+        rrgame: &rrgame,
+        ..(*input)
+    };
+
+    (dp_NP(&new_input, m, j) - dp_NP(input, m, j)) / delta
 }
 
 #[allow(dead_code)]

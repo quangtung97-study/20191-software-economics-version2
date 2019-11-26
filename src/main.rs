@@ -6,6 +6,7 @@
 mod computation;
 mod input;
 mod mrgame;
+mod newton;
 mod relation;
 mod rrgame;
 
@@ -74,6 +75,13 @@ fn main() {
     for m in relation.initial_retailers() {
         for j in relation.products(m, &mrgame.decision) {
             print!("{}\t", computation::da_NP_approx(&input, m, j));
+        }
+    }
+    println!("");
+
+    for m in relation.initial_retailers() {
+        for j in relation.products(m, &mrgame.decision) {
+            print!("{}\t", computation::dpdp_NP(&input, m, j, j));
         }
     }
     println!("");
