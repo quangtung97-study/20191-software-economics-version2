@@ -310,9 +310,9 @@ fn input_beta_mgxy(relation: &Relation, constant: &mut Constant) {
     // constant.show_beta_mgxy(relation);
 }
 
-fn input_K_mg(relation: &Relation, constant: &mut Constant) {
+fn input_mg(relation: &Relation, constant: &mut Constant) {
     constant.input_K_mg(
-        &relation,
+        relation,
         &[
             &[700.0, 800.0, 800.0, 900.0],
             &[700.0, 900.0, 700.0, 0.0],
@@ -320,10 +320,41 @@ fn input_K_mg(relation: &Relation, constant: &mut Constant) {
         ],
     );
     // constant.show_K_mg(&relation);
+
+    constant.input_zeta_mg(
+        relation,
+        &[
+            &[1.8, 1.8, 1.4, 2.1],
+            &[1.4, 1.8, 1.5, 0.0],
+            &[1.4, 0.0, 0.0, 2.0],
+        ],
+    );
+    // constant.show_zeta_mg(relation);
+
+    constant.input_HR_mg(
+        relation,
+        &[
+            &[6.2, 5.1, 6.1, 6.3],
+            &[6.2, 5.1, 6.1, 0.0],
+            &[5.5, 4.8, 0.0, 5.3],
+        ],
+    );
+    // constant.show_HR_mg(relation);
+
+    let inf = std::f64::INFINITY;
+    constant.input_TP_mg(
+        relation,
+        &[
+            &[1.4, 1.7, 1.4, 1.4],
+            &[1.5, 2.5, 1.8, inf],
+            &[1.4, inf, inf, 1.6],
+        ],
+    );
+    // constant.show_TP_mg(relation);
 }
 
 fn input_eA_mgy(relation: &Relation, constant: &mut Constant) {
-    constant.input_aA_mgy(
+    constant.input_eA_mgy(
         relation,
         &[
             &[0.35, 0.26, 0.2, 0.18],
@@ -405,10 +436,29 @@ pub fn input() -> (Relation, Constant) {
     input_v_mgxy(&relation, &mut constant);
     input_ea_mgxy(&relation, &mut constant);
     input_beta_mgxy(&relation, &mut constant);
-    input_K_mg(&relation, &mut constant);
+    input_mg(&relation, &mut constant);
     input_eA_mgy(&relation, &mut constant);
     input_u_mgy(&relation, &mut constant);
 
+    constant.input_pw_g0(&relation, &[36.0, 34.0, 32.0, 39.0]);
+    constant.input_PCP_g(&relation, &[1.2, 1.3, 1.2, 1.6]);
+
+    constant.input_ORM_s(&relation, &[60.0, 45.0, 95.0]);
+
+    constant.input_HRM_l(&relation, &[0.45, 0.48, 0.52]);
+
+    constant.input_FCA_k(&relation, &[1700.0, 1900.0, 4600.0, 0.0, 0.0, 0.0]);
+    constant.input_PCA_k(&relation, &[0.9, 1.1, 1.2, 0.0, 0.0, 0.0]);
+
+    constant.input_TVR_m(&relation, &[175.0, 165.0, 55.0]);
+
+    // constant.show_TVR_m(&relation);
+    // constant.show_FCA_k(&relation);
+    // constant.show_PCA_k(&relation);
+    // constant.show_HRM_l(&relation);
+    // constant.show_ORM_s(&relation);
+    // constant.show_pw_g0(&relation);
+    // constant.show_PCP_g(&relation);
     // constant.show_ep_mgxy(&relation);
 
     (relation, constant)
