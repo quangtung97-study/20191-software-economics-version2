@@ -9,9 +9,10 @@ mod mrgame;
 mod newton;
 mod relation;
 mod rrgame;
+mod solver;
 
 use mrgame::MRGame;
-use relation::{Product, Retailer};
+use relation::Retailer;
 use rrgame::RRGame;
 
 fn main() {
@@ -65,6 +66,17 @@ fn main() {
         println!("DP_{}{}: {}", retailer1.id, g.id, demand);
     }
 
+    // dp_NP
+    println!("da_NP");
+    for m in relation.initial_retailers() {
+        for j in relation.products(m, &mrgame.decision) {
+            print!("{}\t", computation::dp_NP(&input, m, j));
+        }
+    }
+    println!("");
+
+    // da_NP
+    println!("da_NP");
     for m in relation.initial_retailers() {
         for j in relation.products(m, &mrgame.decision) {
             print!("{}\t", computation::da_NP(&input, m, j));
@@ -72,13 +84,7 @@ fn main() {
     }
     println!("");
 
-    for m in relation.initial_retailers() {
-        for j in relation.products(m, &mrgame.decision) {
-            print!("{}\t", computation::da_NP_approx(&input, m, j));
-        }
-    }
-    println!("");
-
+    // dpdp_NP
     for m in relation.initial_retailers() {
         for j in relation.products(m, &mrgame.decision) {
             print!("{}\t", computation::dpdp_NP(&input, m, j, j));
@@ -91,5 +97,14 @@ fn main() {
         println!("Profit: {}", profit);
     }
 
-    println!("NP0 = {}", computation::NP0(&input));
+    for m in relation.initial_retailers() {
+        let new_parameter = solver::rrgame_solve(&input, m);
+        match new_parameter {
+            Some(new_parameter) => {
+                new_parameter.show_p_mg(&relation);
+                new_parameter.show_a_mg(&relation);
+            }
+            None => {}
+        }
+    }
 }

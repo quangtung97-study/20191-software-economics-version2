@@ -148,6 +148,7 @@ pub fn dp_DP(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     beta_mgxy[m][g][m][j] * ep_mgxy[m][g][m][j] * safe_pow(p_mg[m][j], ep_mgxy[m][g][m][j] - 1.0)
 }
 
+#[allow(dead_code)]
 pub fn dp_DP_approx(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
     rrgame.parameter.p_mg[m][j] += 0.01;
@@ -168,6 +169,7 @@ pub fn da_DP(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     v_mgxy[m][g][m][j] * ea_mgxy[m][g][m][j] * safe_pow(a_mg[m][j], ea_mgxy[m][g][m][j] - 1.0)
 }
 
+#[allow(dead_code)]
 pub fn da_DP_approx(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
     rrgame.parameter.a_mg[m][j] += 0.01;
@@ -204,6 +206,7 @@ pub fn dp_NP(input: &Input, m: Retailer, j: Product) -> f64 {
     sum
 }
 
+#[allow(dead_code)]
 pub fn dp_NP_approx(input: &Input, m: Retailer, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
     rrgame.parameter.p_mg[m][j] += 0.01;
@@ -221,6 +224,7 @@ pub fn da_pw(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     -rho_g[g] * da_DP(input, m, g, j)
 }
 
+#[allow(dead_code)]
 pub fn da_pw_approx(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
     rrgame.parameter.a_mg[m][j] += 0.01;
@@ -253,6 +257,7 @@ pub fn da_NP(input: &Input, m: Retailer, j: Product) -> f64 {
     sum
 }
 
+#[allow(dead_code)]
 pub fn da_NP_approx(input: &Input, m: Retailer, j: Product) -> f64 {
     let mut rrgame = input.rrgame.clone();
     let delta = 0.001;
@@ -293,4 +298,80 @@ pub fn compute_TVR_m(input: &Input, m: Retailer) -> f64 {
     }
 
     w_m[m] * sum
+}
+
+pub fn TVR_constraint(input: &Input, m: Retailer) -> f64 {
+    let w_m = &input.constant.w_m;
+    let c_m = &input.mrgame.parameter.c_m;
+    let V_g = &input.constant.V_g;
+    let relation = input.relation;
+    let decision = &input.mrgame.decision;
+    let TVR_m = &input.constant.TVR_m;
+
+    let mut sum = 0.0;
+    for g in relation.products(m, decision) {
+        sum += c_m[m] * DP(input, m, g) * V_g[g] / 2.0;
+    }
+
+    w_m[m] * sum - TVR_m[m]
+}
+
+pub fn dp_TVR_constraint(input: &Input, m: Retailer, j: Product) -> f64 {
+    let relation = input.relation;
+    let decision = &input.mrgame.decision;
+    let w_m = &input.constant.w_m;
+    let c_m = &input.mrgame.parameter.c_m;
+    let V_g = &input.constant.V_g;
+
+    let mut sum = 0.0;
+
+    for g in relation.products(m, decision) {
+        sum += c_m[m] * dp_DP(input, m, g, j) * V_g[g] / 2.0;
+    }
+
+    w_m[m] * sum
+}
+
+#[allow(dead_code)]
+pub fn dp_TVR_constraint_approx(input: &Input, m: Retailer, j: Product) -> f64 {
+    let mut rrgame = input.rrgame.clone();
+    let delta = 0.001;
+    rrgame.parameter.p_mg[m][j] += delta;
+
+    let new_input = Input {
+        rrgame: &rrgame,
+        ..(*input)
+    };
+
+    (TVR_constraint(&new_input, m) - TVR_constraint(input, m)) / delta
+}
+
+pub fn da_TVR_constraint(input: &Input, m: Retailer, j: Product) -> f64 {
+    let relation = input.relation;
+    let decision = &input.mrgame.decision;
+    let w_m = &input.constant.w_m;
+    let c_m = &input.mrgame.parameter.c_m;
+    let V_g = &input.constant.V_g;
+
+    let mut sum = 0.0;
+
+    for g in relation.products(m, decision) {
+        sum += c_m[m] * da_DP(input, m, g, j) * V_g[g] / 2.0;
+    }
+
+    w_m[m] * sum
+}
+
+#[allow(dead_code)]
+pub fn da_TVR_constraint_approx(input: &Input, m: Retailer, j: Product) -> f64 {
+    let mut rrgame = input.rrgame.clone();
+    let delta = 0.001;
+    rrgame.parameter.a_mg[m][j] += delta;
+
+    let new_input = Input {
+        rrgame: &rrgame,
+        ..(*input)
+    };
+
+    (TVR_constraint(&new_input, m) - TVR_constraint(input, m)) / delta
 }
