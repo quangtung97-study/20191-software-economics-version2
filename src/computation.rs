@@ -1,5 +1,7 @@
 use crate::mrgame::MRGame;
+use crate::relation::Alternative;
 use crate::relation::Constant;
+use crate::relation::Material;
 use crate::relation::Product;
 use crate::relation::Relation;
 use crate::relation::Retailer;
@@ -10,6 +12,16 @@ pub struct Input<'a, 'b, 'c, 'd> {
     pub constant: &'b Constant,
     pub mrgame: &'c MRGame,
     pub rrgame: &'d RRGame,
+}
+
+fn safe_pow(a: f64, n: f64) -> f64 {
+    if n == 0.0 {
+        1.0
+    } else if a < 0.0 {
+        0.0
+    } else {
+        f64::powf(a, n)
+    }
 }
 
 pub fn DP(input: &Input, m: Retailer, g: Product) -> f64 {
@@ -31,13 +43,13 @@ pub fn DP(input: &Input, m: Retailer, g: Product) -> f64 {
 
     let mut sum = K_mg[m][g];
     for y in relation.products(m, decision) {
-        sum += u_mgy[m][g][y] * f64::powf(A_g[y], eA_mgy[m][g][y]);
+        sum += u_mgy[m][g][y] * safe_pow(A_g[y], eA_mgy[m][g][y]);
     }
 
     for x in relation.initial_retailers() {
         for y in relation.products(x, decision) {
-            sum += beta_mgxy[m][g][x][y] * f64::powf(p_mg[x][y], ep_mgxy[m][g][x][y]);
-            sum += v_mgxy[m][g][x][y] * f64::powf(a_mg[x][y], ea_mgxy[m][g][x][y]);
+            sum += beta_mgxy[m][g][x][y] * safe_pow(p_mg[x][y], ep_mgxy[m][g][x][y]);
+            sum += v_mgxy[m][g][x][y] * safe_pow(a_mg[x][y], ea_mgxy[m][g][x][y]);
         }
     }
 
@@ -70,6 +82,22 @@ pub fn NP(input: &Input, m: Retailer) -> f64 {
     sum
 }
 
+fn DA(input: &Input, k: Alternative) -> f64 {
+    let relation = input.relation;
+    let decision = &input.mrgame.decision;
+
+    let delta_gk = &input.constant.delta_gk;
+
+    let mut sum = 0.0;
+    for g in relation.products_for_alternative(k, &decision) {
+        for m in relation.retailers(g) {
+            sum += (delta_gk[g][k] as f64) * DP(input, m, g);
+        }
+    }
+
+    sum
+}
+
 pub fn NP0(input: &Input) -> f64 {
     let relation = input.relation;
     let decision = &input.mrgame.decision;
@@ -81,9 +109,14 @@ pub fn NP0(input: &Input) -> f64 {
     let PCP_g = &input.constant.PCP_g;
     let ORM_s = &input.constant.ORM_s;
     let HRM_l = &input.constant.HRM_l;
+    let PCA_k = &input.constant.PCA_k;
+    let PCR_sl = &input.constant.PCR_sl;
+    let FCM_j = &input.constant.FCM_j;
+    let FCA_k = &input.constant.FCA_k;
 
     let crm_s = &input.mrgame.parameter.crm_s;
     let drm_sl = &input.mrgame.parameter.drm_sl;
+    let A_g = &input.mrgame.parameter.A_g;
 
     let mut sum = 0.0;
 
@@ -125,19 +158,51 @@ pub fn NP0(input: &Input) -> f64 {
         }
     }
 
-    // TODO
+    for k in relation.all_alternatives() {
+        sum -= DA(input, k) * PCA_k[k];
+    }
+
+    for s in relation.all_suppliers() {
+        for l in relation.all_materials() {
+            sum -= drm_sl[s][l] * PCR_sl[s][l];
+        }
+    }
+    // println!("NP0 sum = {}", sum);
+
+    for g in relation.all_products() {
+        sum -= decision.fpp(g) * PCP_g[g];
+    }
+
+    for j in relation.all_modules() {
+        sum -= decision.fpm(relation, j) * FCM_j[j];
+    }
+
+    for k in relation.all_alternatives() {
+        sum -= decision.fpa(k) * FCA_k[k];
+    }
+
+    for g in relation.all_products() {
+        sum -= A_g[g];
+    }
 
     sum
 }
 
-fn safe_pow(a: f64, n: f64) -> f64 {
-    if n == 0.0 {
-        1.0
-    } else if a < 0.0 {
-        0.0
-    } else {
-        f64::powf(a, n)
+pub fn NP0_constraint1(input: &Input, l: Material) -> f64 {
+    let relation = input.relation;
+    let drm_sl = &input.mrgame.parameter.drm_sl;
+    let sigma_kl = &input.constant.sigma_kl;
+
+    let mut sum = 0.0;
+    for s in relation.all_suppliers() {
+        sum += drm_sl[s][l];
     }
+
+    for k in relation.all_alternatives() {
+        sum -= sigma_kl[k][l] as f64 * DA(input, k);
+    }
+
+    sum
 }
 
 pub fn dp_DP(input: &Input, m: Retailer, g: Product, j: Product) -> f64 {
@@ -374,4 +439,22 @@ pub fn da_TVR_constraint_approx(input: &Input, m: Retailer, j: Product) -> f64 {
     };
 
     (TVR_constraint(&new_input, m) - TVR_constraint(input, m)) / delta
+}
+
+pub fn Ta_constraint(input: &Input, m: Retailer) -> f64 {
+    let relation = input.relation;
+    let decision = &input.mrgame.decision;
+    let a_mg = &input.rrgame.parameter.a_mg;
+    let Ta_m = &input.constant.Ta_m;
+
+    let mut sum = 0.0;
+    for g in relation.products(m, decision) {
+        sum += a_mg[m][g];
+    }
+
+    sum - Ta_m[m]
+}
+
+pub fn da_Ta_constraint(input: &Input, _m: Retailer, _j: Product) -> f64 {
+    1.0
 }

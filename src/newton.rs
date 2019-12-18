@@ -1,7 +1,7 @@
 use ndarray::{Array1, Array2};
 use ndarray_linalg::Solve;
 
-const N: usize = 100;
+const N: usize = 2;
 
 #[allow(dead_code)]
 pub fn simple_newton_method(f: impl Fn(f64) -> f64, df: impl Fn(f64) -> f64, x0: f64) -> f64 {
@@ -49,11 +49,11 @@ pub fn newton_method(
         };
         x = x + dx;
 
-        for e in x.iter_mut() {
-            if *e < 0.0 {
-                *e = 0.0;
-            }
-        }
+        // for e in x.iter_mut() {
+        //     if *e < 0.0 {
+        //         *e = 0.0;
+        //     }
+        // }
     }
 
     Some(x)
@@ -92,14 +92,15 @@ mod tests {
 
     #[test]
     fn test_jacobi() {
-        let f = |x: &Array1<f64>| arr1(&[2.0 * x[0] * x[0], x[1] * x[1]]);
+        let f =
+            |x: &Array1<f64>| arr1(&[2.0 * x[0] * x[0] + 3.0 * x[1], -4.0 * x[0] + x[1] * x[1]]);
         let x0 = arr1(&[1.0, 1.0]);
         let dx0 = arr1(&[0.000001, 0.000001]);
         let j = jacobi(&f, &x0, &dx0);
 
         assert_approx_eq!(j[(0, 0)], 4.0, 0.0001);
-        assert_approx_eq!(j[(0, 1)], 0.0, 0.0001);
-        assert_approx_eq!(j[(1, 0)], 0.0, 0.0001);
+        assert_approx_eq!(j[(0, 1)], 3.0, 0.0001);
+        assert_approx_eq!(j[(1, 0)], -4.0, 0.0001);
         assert_approx_eq!(j[(1, 1)], 2.0, 0.0001);
     }
 }

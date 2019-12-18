@@ -3,20 +3,128 @@ use crate::computation::Input;
 use crate::newton;
 use crate::relation::Retailer;
 use crate::rrgame;
-use computation::TVR_constraint;
-use computation::{da_NP, da_TVR_constraint};
+use crate::rrgame::RRGame;
+use computation::{da_NP, da_TVR_constraint, da_Ta_constraint};
 use computation::{dp_NP, dp_TVR_constraint};
+use computation::{TVR_constraint, Ta_constraint};
 use ndarray::arr1;
 use ndarray::Array1;
 
-pub fn rrgame_input_to_array(input: &Input, m: Retailer, lambda: f64) -> Array1<f64> {
+#[derive(Copy, Clone)]
+pub struct RRGameConstraints {
+    pub TVR_active: bool,
+    pub Ta_active: bool,
+}
+
+#[derive(Copy, Clone)]
+pub struct RRGameLambdas {
+    pub TVR: f64,
+    pub Ta: f64,
+}
+
+impl RRGameConstraints {
+    fn array_len(&self, product_count: usize) -> usize {
+        let mut result = product_count * 2;
+
+        if self.TVR_active {
+            result += 1;
+        }
+
+        if self.Ta_active {
+            result += 1;
+        }
+
+        result
+    }
+
+    fn append_lambdas(&self, array: &mut Array1<f64>, index: usize, lambdas: RRGameLambdas) {
+        let mut index = index;
+        if self.TVR_active {
+            array[index] = lambdas.TVR;
+            index += 1;
+        }
+
+        if self.Ta_active {
+            array[index] = lambdas.Ta;
+        }
+    }
+
+    fn get_lambdas(&self, array: &Array1<f64>, index: usize) -> RRGameLambdas {
+        let mut index = index;
+        let mut TVR = 0.0;
+        let mut Ta = 0.0;
+
+        if self.TVR_active {
+            TVR = array[index];
+            index += 1;
+        }
+
+        if self.Ta_active {
+            Ta = array[index];
+        }
+
+        RRGameLambdas { TVR, Ta }
+    }
+
+    fn append_constraints(
+        &self,
+        input: &Input,
+        m: Retailer,
+        array: &mut Array1<f64>,
+        index: usize,
+    ) {
+        let mut index = index;
+        if self.TVR_active {
+            array[index] = TVR_constraint(input, m);
+            index += 1;
+        }
+
+        if self.Ta_active {
+            array[index] = Ta_constraint(input, m);
+        }
+    }
+
+    fn accept_result(
+        &self,
+        lambdas: RRGameLambdas,
+        parameter: rrgame::Parameter,
+    ) -> Option<rrgame::Parameter> {
+        if self.TVR_active && lambdas.TVR < 0.0 {
+            return None;
+        }
+
+        if self.Ta_active && lambdas.Ta < 0.0 {
+            return None;
+        }
+
+        Some(parameter)
+    }
+
+    fn print(&self, lambdas: RRGameLambdas) {
+        println!("---------------------------------------");
+        if self.TVR_active {
+            println!("Lambda TVR: {}", lambdas.TVR);
+        }
+        if self.Ta_active {
+            println!("Lambda Ta: {}", lambdas.Ta);
+        }
+    }
+}
+
+pub fn rrgame_input_to_array(
+    input: &Input,
+    m: Retailer,
+    constraints: RRGameConstraints,
+    lambdas: RRGameLambdas,
+) -> Array1<f64> {
     let relation = input.relation;
     let decision = &input.mrgame.decision;
     let p_mg = &input.rrgame.parameter.p_mg;
     let a_mg = &input.rrgame.parameter.a_mg;
 
     let len = relation.products(m, decision).len();
-    let mut result = Array1::zeros(len * 2 + 1);
+
+    let mut result = Array1::zeros(constraints.array_len(len));
 
     let mut index = 0;
     for g in relation.products(m, decision) {
@@ -29,7 +137,7 @@ pub fn rrgame_input_to_array(input: &Input, m: Retailer, lambda: f64) -> Array1<
         index += 1;
     }
 
-    result[index] = lambda;
+    constraints.append_lambdas(&mut result, index, lambdas);
 
     result
 }
@@ -38,7 +146,8 @@ pub fn rrgame_array_to_parameter(
     input: &Input,
     m: Retailer,
     array: &Array1<f64>,
-) -> (rrgame::Parameter, f64) {
+    constraints: RRGameConstraints,
+) -> (rrgame::Parameter, RRGameLambdas) {
     let mut new_parameter = input.rrgame.parameter.clone();
     let p_mg = &mut new_parameter.p_mg;
     let a_mg = &mut new_parameter.a_mg;
@@ -57,13 +166,16 @@ pub fn rrgame_array_to_parameter(
         index += 1;
     }
 
-    let lambda = array[index];
-
-    (new_parameter, lambda)
+    (new_parameter, constraints.get_lambdas(array, index))
 }
 
-pub fn rrgame_f(old_input: &Input, m: Retailer, array: &Array1<f64>) -> Array1<f64> {
-    let (parameter, lambda) = rrgame_array_to_parameter(old_input, m, array);
+pub fn rrgame_f(
+    old_input: &Input,
+    m: Retailer,
+    array: &Array1<f64>,
+    constraints: RRGameConstraints,
+) -> Array1<f64> {
+    let (parameter, lambdas) = rrgame_array_to_parameter(old_input, m, array, constraints);
     let rrgame = rrgame::RRGame {
         parameter,
         ..(*old_input.rrgame)
@@ -79,34 +191,99 @@ pub fn rrgame_f(old_input: &Input, m: Retailer, array: &Array1<f64>) -> Array1<f
 
     let products = relation.products(m, decision);
     let len = products.len();
-    let mut result = Array1::zeros(len * 2 + 1);
+    let mut result = Array1::zeros(constraints.array_len(len));
 
     let mut index = 0;
     for j in products.iter() {
-        result[index] = dp_NP(&input, m, *j) - lambda * dp_TVR_constraint(&input, m, *j);
+        result[index] = dp_NP(&input, m, *j);
+        if constraints.TVR_active {
+            result[index] -= lambdas.TVR * dp_TVR_constraint(&input, m, *j);
+        }
         index += 1;
     }
 
     for j in products.iter() {
-        result[index] = da_NP(&input, m, *j) - lambda * da_TVR_constraint(&input, m, *j);
+        result[index] = da_NP(&input, m, *j);
+        if constraints.TVR_active {
+            result[index] -= lambdas.TVR * da_TVR_constraint(&input, m, *j)
+        }
+        if constraints.Ta_active {
+            result[index] -= lambdas.Ta * da_Ta_constraint(&input, m, *j);
+            // result[index] += lambdas.Ta;
+        }
         index += 1;
     }
 
-    result[index] = TVR_constraint(&input, m);
+    constraints.append_constraints(&input, m, &mut result, index);
 
     result
 }
 
-pub fn rrgame_solve(input: &Input, m: Retailer) -> Option<rrgame::Parameter> {
-    let f = |a: &Array1<f64>| rrgame_f(input, m, a);
-    let x0 = rrgame_input_to_array(input, m, 1.0);
+fn rrgame_solve_constraints(
+    input: &Input,
+    m: Retailer,
+    constraints: RRGameConstraints,
+) -> Option<rrgame::Parameter> {
+    let f = |a: &Array1<f64>| rrgame_f(input, m, a, constraints);
+    let x0 = rrgame_input_to_array(input, m, constraints, RRGameLambdas { TVR: 1.0, Ta: 1.0 });
     let len = input.relation.products(m, &input.mrgame.decision).len();
-    let arr: Vec<f64> = (0..(len * 2 + 1)).map(|_| 0.000001).collect();
+    let arr: Vec<f64> = (0..(constraints.array_len(len)))
+        .map(|_| 0.000001)
+        .collect();
     let dx0 = arr1(&arr);
 
     let x = newton::newton_method(&f, &x0, &dx0)?;
 
-    let (parameter, _) = rrgame_array_to_parameter(input, m, &x);
+    let (parameter, lambdas) = rrgame_array_to_parameter(input, m, &x, constraints);
+    // constraints.print(lambdas);
 
-    Some(parameter)
+    return constraints.accept_result(lambdas, parameter);
+}
+
+fn rrgame_try_constraint(
+    old_parameter: Option<rrgame::Parameter>,
+    input: &Input,
+    m: Retailer,
+    profit: &mut f64,
+    TVR_active: bool,
+    Ta_active: bool,
+) -> Option<rrgame::Parameter> {
+    let constraints = RRGameConstraints {
+        TVR_active,
+        Ta_active,
+    };
+    if let Some(parameter) = rrgame_solve_constraints(input, m, constraints) {
+        let rrgame = RRGame {
+            parameter: parameter,
+            ..(*input.rrgame)
+        };
+
+        let new_profit = {
+            let new_input = Input {
+                rrgame: &rrgame,
+                ..(*input)
+            };
+            computation::NP(&new_input, m)
+        };
+
+        if new_profit > *profit {
+            *profit = new_profit;
+            println!("new profit: {}", *profit);
+            return Some(rrgame.parameter);
+        }
+    }
+
+    old_parameter
+}
+
+pub fn rrgame_solve(input: &Input, m: Retailer) -> Option<rrgame::Parameter> {
+    let mut result: Option<rrgame::Parameter> = None;
+    let mut profit = computation::NP(input, m);
+
+    result = rrgame_try_constraint(result, input, m, &mut profit, false, false);
+    result = rrgame_try_constraint(result, input, m, &mut profit, true, false);
+    result = rrgame_try_constraint(result, input, m, &mut profit, false, true);
+    result = rrgame_try_constraint(result, input, m, &mut profit, true, true);
+
+    result
 }

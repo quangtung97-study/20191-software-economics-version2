@@ -57,13 +57,35 @@ fn input_v_mgxy(relation: &Relation, constant: &mut Constant) {
         ],
     );
 
+    // constant.input_v_mgxy(
+    //     relation,
+    //     1,
+    //     1,
+    //     &[
+    //         &[-1.0, -1.6, -1.0, -0.6],
+    //         &[-1.6, -6.3, -1.6, 0.0],
+    //         &[-0.6, 0.0, 0.0, -0.6],
+    //     ],
+    // );
+
+    // constant.input_v_mgxy(
+    //     relation,
+    //     1,
+    //     2,
+    //     &[
+    //         &[-1.0, -1.6, -1.0, -0.6],
+    //         &[-1.6, -6.3, -1.6, 0.0],
+    //         &[-0.6, 0.0, 0.0, -0.6],
+    //     ],
+    // );
+
     constant.input_v_mgxy(
         relation,
         1,
         1,
         &[
             &[-1.0, -1.6, -1.0, -0.6],
-            &[-1.6, -6.3, -1.6, 0.0],
+            &[-1.6, 6.3, -1.6, 0.0],
             &[-0.6, 0.0, 0.0, -0.6],
         ],
     );
@@ -74,7 +96,7 @@ fn input_v_mgxy(relation: &Relation, constant: &mut Constant) {
         2,
         &[
             &[-1.0, -1.6, -1.0, -0.6],
-            &[-1.6, -6.3, -1.6, 0.0],
+            &[-1.6, -1.6, 6.6, 0.0],
             &[-0.6, 0.0, 0.0, -0.6],
         ],
     );
@@ -263,13 +285,24 @@ fn input_beta_mgxy(relation: &Relation, constant: &mut Constant) {
         ],
     );
 
+    // constant.input_beta_mgxy(
+    //     relation,
+    //     1,
+    //     1,
+    //     &[
+    //         &[1.0, 2.1, 1.2, 0.8],
+    //         &[1.6, 1.8, 1.6, 0.0],
+    //         &[1.1, 0.0, 0.0, 0.5],
+    //     ],
+    // );
+
     constant.input_beta_mgxy(
         relation,
         1,
         1,
         &[
             &[1.0, 2.1, 1.2, 0.8],
-            &[1.6, 1.8, 1.6, 0.0],
+            &[1.6, 1.8, -16.0, 0.0],
             &[1.1, 0.0, 0.0, 0.5],
         ],
     );
@@ -423,7 +456,7 @@ pub fn input() -> (Relation, Constant) {
     relation.alternative_product_pairs(&[
         (0, 0),
         (1, 1),
-        (1, 2),
+        (2, 2),
         (2, 3),
         (3, 0),
         (3, 2),
@@ -450,8 +483,45 @@ pub fn input() -> (Relation, Constant) {
     constant.input_FCA_k(&relation, &[1700.0, 1900.0, 4600.0, 0.0, 0.0, 0.0]);
     constant.input_PCA_k(&relation, &[0.9, 1.1, 1.2, 0.0, 0.0, 0.0]);
 
-    constant.input_TVR_m(&relation, &[175.0, 165.0, 55.0]);
+    let inf = 10000000.0;
+    constant.input_PCR_sl(
+        &relation,
+        &[&[0.9, 1.1, 1.4], &[1.0, inf, 1.2], &[1.1, 1.0, inf]],
+    );
 
+    constant.input_TVR_m(&relation, &[175.0, 165.0, 55.0]);
+    // constant.input_Ta_m(&relation, &[4531.38, 2038.56, 4010.83]);
+    constant.input_Ta_m(&relation, &[4531.38, 2038.56, 4010.83]);
+
+    constant.input_delta_gk(
+        &relation,
+        &[
+            &[2, 0, 0, 3, 0, 0],
+            &[0, 2, 0, 0, 3, 0],
+            &[0, 0, 2, 2, 0, 0],
+            &[0, 0, 2, 0, 0, 3],
+        ],
+    );
+
+    constant.input_sigma_kl(
+        &relation,
+        &[
+            &[2, 2, 0],
+            &[1, 3, 0],
+            &[2, 0, 3],
+            &[1, 0, 0],
+            &[0, 1, 0],
+            &[0, 0, 1],
+        ],
+    );
+
+    constant.input_FCM_j(&relation, &[2000.0, 0.0]);
+
+    // constant.show_FCM_j(&relation);
+    // constant.show_PCR_sl(&relation);
+    // constant.show_sigma_kl(&relation);
+    // constant.show_delta_gk(&relation);
+    // constant.show_Ta_m(&relation);
     // constant.show_TVR_m(&relation);
     // constant.show_FCA_k(&relation);
     // constant.show_PCA_k(&relation);

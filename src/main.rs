@@ -12,6 +12,7 @@ mod rrgame;
 mod solver;
 
 use mrgame::MRGame;
+use relation::Material;
 use relation::Retailer;
 use rrgame::RRGame;
 
@@ -53,58 +54,83 @@ fn main() {
     );
     rrgame.parameter.show_a_mg(&relation);
 
-    let input = computation::Input {
-        relation: &relation,
-        constant: &constant,
-        mrgame: &mrgame,
-        rrgame: &rrgame,
-    };
+    {
+        let input = computation::Input {
+            relation: &relation,
+            constant: &constant,
+            mrgame: &mrgame,
+            rrgame: &rrgame,
+        };
 
-    let retailer1 = Retailer { id: 0 };
-    for g in relation.products(retailer1, &mrgame.decision) {
-        let demand = computation::DP(&input, retailer1, g);
-        println!("DP_{}{}: {}", retailer1.id, g.id, demand);
-    }
-
-    // dp_NP
-    println!("da_NP");
-    for m in relation.initial_retailers() {
-        for j in relation.products(m, &mrgame.decision) {
-            print!("{}\t", computation::dp_NP(&input, m, j));
+        let retailer1 = Retailer { id: 0 };
+        for g in relation.products(retailer1, &mrgame.decision) {
+            let demand = computation::DP(&input, retailer1, g);
+            println!("DP_{}{}: {}", retailer1.id, g.id, demand);
         }
-    }
-    println!("");
 
-    // da_NP
-    println!("da_NP");
-    for m in relation.initial_retailers() {
-        for j in relation.products(m, &mrgame.decision) {
-            print!("{}\t", computation::da_NP(&input, m, j));
-        }
-    }
-    println!("");
-
-    // dpdp_NP
-    for m in relation.initial_retailers() {
-        for j in relation.products(m, &mrgame.decision) {
-            print!("{}\t", computation::dpdp_NP(&input, m, j, j));
-        }
-    }
-    println!("");
-
-    for m in relation.initial_retailers() {
-        let profit = computation::NP(&input, m);
-        println!("Profit: {}", profit);
-    }
-
-    for m in relation.initial_retailers() {
-        let new_parameter = solver::rrgame_solve(&input, m);
-        match new_parameter {
-            Some(new_parameter) => {
-                new_parameter.show_p_mg(&relation);
-                new_parameter.show_a_mg(&relation);
+        // dp_NP
+        println!("dp_NP");
+        for m in relation.initial_retailers() {
+            for j in relation.products(m, &mrgame.decision) {
+                print!("{}\t", computation::dp_NP(&input, m, j));
             }
-            None => {}
+        }
+        println!("");
+
+        // da_NP
+        println!("da_NP");
+        for m in relation.initial_retailers() {
+            for j in relation.products(m, &mrgame.decision) {
+                print!("{}\t", computation::da_NP(&input, m, j));
+            }
+        }
+        println!("");
+
+        // dpdp_NP
+        for m in relation.initial_retailers() {
+            for j in relation.products(m, &mrgame.decision) {
+                print!("{}\t", computation::dpdp_NP(&input, m, j, j));
+            }
+        }
+        println!("");
+
+        for m in relation.initial_retailers() {
+            let profit = computation::NP(&input, m);
+            println!("Profit: {}", profit);
+        }
+
+        println!("NP0 = {}", computation::NP0(&input));
+        println!(
+            "NP0 constraint1 = {}",
+            computation::NP0_constraint1(&input, Material { id: 0 })
+        );
+    }
+
+    for _step in 0..2 {
+        for m in relation.initial_retailers() {
+            println!("----------------------------------");
+            let new_parameter = {
+                let input = computation::Input {
+                    relation: &relation,
+                    constant: &constant,
+                    rrgame: &rrgame,
+                    mrgame: &mrgame,
+                };
+                solver::rrgame_solve(&input, m)
+            };
+            match new_parameter {
+                Some(new_parameter) => {
+                    println!("m: {}", m.id);
+                    new_parameter.show_p_mg(&relation);
+                    new_parameter.show_a_mg(&relation);
+
+                    for g in relation.products(m, &mrgame.decision) {
+                        rrgame.parameter.p_mg[m][g] = new_parameter.p_mg[m][g];
+                        rrgame.parameter.a_mg[m][g] = new_parameter.a_mg[m][g];
+                    }
+                }
+                None => {}
+            }
         }
     }
 }

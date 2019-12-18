@@ -1,8 +1,10 @@
-use crate::relation::{MaterialMap, ProductMap, Relation};
+use crate::relation::{Alternative, Module, Product};
+use crate::relation::{AlternativeMap, MaterialMap, ProductMap, Relation};
 use crate::relation::{RetailerMap, SupplierMap};
 
 pub struct Decision {
     pub product: ProductMap<bool>,
+    pub alternative: AlternativeMap<bool>,
 }
 
 pub struct Parameter {
@@ -18,11 +20,37 @@ pub struct MRGame {
     pub parameter: Parameter,
 }
 
+fn bool_to_float(b: bool) -> f64 {
+    if b == true {
+        1.0
+    } else {
+        0.0
+    }
+}
+
 impl Decision {
     pub fn new(relation: &Relation) -> Self {
         Self {
             product: ProductMap::new(relation, true),
+            alternative: AlternativeMap::new(relation, true),
         }
+    }
+
+    pub fn fpp(&self, g: Product) -> f64 {
+        bool_to_float(self.product[g])
+    }
+
+    pub fn fpa(&self, k: Alternative) -> f64 {
+        bool_to_float(self.alternative[k])
+    }
+
+    pub fn fpm(&self, relation: &Relation, j: Module) -> f64 {
+        bool_to_float(
+            relation
+                .alternatives_of_module(j)
+                .iter()
+                .any(|k| self.alternative[*k]),
+        )
     }
 
     #[allow(dead_code)]

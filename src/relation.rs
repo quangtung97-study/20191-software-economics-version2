@@ -111,11 +111,7 @@ impl Relation {
             .map(|p| p.1)
     }
 
-    pub fn products<'a, 'b>(
-        &'a self,
-        retailer: Retailer,
-        decision: &'b mrgame::Decision,
-    ) -> Vec<Product> {
+    pub fn products(&self, retailer: Retailer, decision: &mrgame::Decision) -> Vec<Product> {
         self.initial_products(retailer)
             .filter(|g| decision.product[*g])
             .collect()
@@ -141,6 +137,10 @@ impl Relation {
         (0..self.alternative_count).map(|id| Alternative { id })
     }
 
+    pub fn all_modules(&self) -> impl Iterator<Item = Module> {
+        (0..self.module_count).map(|id| Module { id })
+    }
+
     pub fn materials(&self, supplier: Supplier) -> Vec<Material> {
         self.supplier_materials
             .iter()
@@ -156,6 +156,35 @@ impl Relation {
             .map(|p| p.1)
             .next()
             .unwrap()
+    }
+
+    pub fn alternatives_of_module(&self, module: Module) -> Vec<Alternative> {
+        self.alternative_modules
+            .iter()
+            .filter(|p| p.1.id == module.id)
+            .map(|p| p.0)
+            .collect()
+    }
+
+    pub fn products_for_alternative(
+        &self,
+        alternative: Alternative,
+        decision: &mrgame::Decision,
+    ) -> Vec<Product> {
+        self.alternative_products
+            .iter()
+            .filter(|p| p.0.id == alternative.id)
+            .map(|p| p.1)
+            .filter(|g| decision.product[*g])
+            .collect()
+    }
+
+    pub fn retailers(&self, product: Product) -> Vec<Retailer> {
+        self.retailer_products
+            .iter()
+            .filter(|p| p.1.id == product.id)
+            .map(|p| p.0)
+            .collect()
     }
 }
 
@@ -294,6 +323,33 @@ impl<T: Clone> IndexMut<Alternative> for AlternativeMap<T> {
     }
 }
 
+#[derive(Clone)]
+pub struct ModuleMap<T: Clone> {
+    data: Vec<T>,
+}
+
+impl<T: Clone> ModuleMap<T> {
+    pub fn new(relation: &Relation, v: T) -> Self {
+        let mut data = Vec::new();
+        data.resize_with(relation.alternative_count, || v.clone());
+        Self { data }
+    }
+}
+
+impl<T: Clone> Index<Module> for ModuleMap<T> {
+    type Output = T;
+
+    fn index(&self, index: Module) -> &Self::Output {
+        &self.data[index.id]
+    }
+}
+
+impl<T: Clone> IndexMut<Module> for ModuleMap<T> {
+    fn index_mut(&mut self, index: Module) -> &mut Self::Output {
+        &mut self.data[index.id]
+    }
+}
+
 pub struct Constant {
     pub v_mgxy: RetailerMap<ProductMap<RetailerMap<ProductMap<f64>>>>,
     pub ea_mgxy: RetailerMap<ProductMap<RetailerMap<ProductMap<f64>>>>,
@@ -311,10 +367,16 @@ pub struct Constant {
     pub HRM_l: MaterialMap<f64>,
     pub FCA_k: AlternativeMap<f64>,
     pub PCA_k: AlternativeMap<f64>,
+    pub PCR_sl: SupplierMap<MaterialMap<f64>>,
 
     pub V_g: ProductMap<f64>,
     pub w_m: RetailerMap<f64>,
     pub TVR_m: RetailerMap<f64>,
+    pub Ta_m: RetailerMap<f64>,
+
+    pub delta_gk: ProductMap<AlternativeMap<usize>>,
+    pub sigma_kl: AlternativeMap<MaterialMap<usize>>,
+    pub FCM_j: ModuleMap<f64>,
 }
 
 impl Constant {
@@ -366,10 +428,16 @@ impl Constant {
             HRM_l: MaterialMap::new(relation, 0.0),
             FCA_k: AlternativeMap::new(relation, 0.0),
             PCA_k: AlternativeMap::new(relation, 0.0),
+            PCR_sl: SupplierMap::new(relation, MaterialMap::new(relation, 0.0)),
 
             V_g: ProductMap::new(relation, 1.0),
             w_m: RetailerMap::new(relation, 1.0),
             TVR_m: RetailerMap::new(relation, 0.0),
+            Ta_m: RetailerMap::new(relation, 0.0),
+
+            delta_gk: ProductMap::new(relation, AlternativeMap::new(relation, 0)),
+            sigma_kl: AlternativeMap::new(relation, MaterialMap::new(relation, 0)),
+            FCM_j: ModuleMap::new(relation, 0.0),
         }
     }
 
@@ -429,7 +497,7 @@ impl Constant {
 
     pub fn input_TP_mg(&mut self, relation: &Relation, data: &[&[f64]]) {
         for m in relation.initial_retailers() {
-            for g in relation.initial_products(m) {
+            for g in relation.all_products() {
                 self.TP_mg[m][g] = data[m.id][g.id];
             }
         }
@@ -495,9 +563,45 @@ impl Constant {
         }
     }
 
+    pub fn input_PCR_sl(&mut self, relation: &Relation, data: &[&[f64]]) {
+        for s in relation.all_suppliers() {
+            for l in relation.all_materials() {
+                self.PCR_sl[s][l] = data[s.id][l.id];
+            }
+        }
+    }
+
     pub fn input_TVR_m(&mut self, relation: &Relation, data: &[f64]) {
         for m in relation.initial_retailers() {
             self.TVR_m[m] = data[m.id];
+        }
+    }
+
+    pub fn input_Ta_m(&mut self, relation: &Relation, data: &[f64]) {
+        for m in relation.initial_retailers() {
+            self.Ta_m[m] = data[m.id];
+        }
+    }
+
+    pub fn input_delta_gk(&mut self, relation: &Relation, data: &[&[usize]]) {
+        for g in relation.all_products() {
+            for k in relation.all_alternatives() {
+                self.delta_gk[g][k] = data[g.id][k.id];
+            }
+        }
+    }
+
+    pub fn input_sigma_kl(&mut self, relation: &Relation, data: &[&[usize]]) {
+        for k in relation.all_alternatives() {
+            for l in relation.all_materials() {
+                self.sigma_kl[k][l] = data[k.id][l.id];
+            }
+        }
+    }
+
+    pub fn input_FCM_j(&mut self, relation: &Relation, data: &[f64]) {
+        for j in relation.all_modules() {
+            self.FCM_j[j] = data[j.id];
         }
     }
 
@@ -690,10 +794,61 @@ impl Constant {
     }
 
     #[allow(dead_code)]
+    pub fn show_PCR_sl(&self, relation: &Relation) {
+        println!("PCR_sl");
+        for s in relation.all_suppliers() {
+            for l in relation.all_materials() {
+                print!("{}\t", self.PCR_sl[s][l]);
+            }
+            println!("");
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn show_TVR_m(&self, relation: &Relation) {
         println!("TVR_m");
         for m in relation.initial_retailers() {
             print!("{}\t", self.TVR_m[m]);
+        }
+        println!("");
+    }
+
+    #[allow(dead_code)]
+    pub fn show_Ta_m(&self, relation: &Relation) {
+        println!("Ta_m");
+        for m in relation.initial_retailers() {
+            print!("{}\t", self.Ta_m[m]);
+        }
+        println!("");
+    }
+
+    #[allow(dead_code)]
+    pub fn show_delta_gk(&self, relation: &Relation) {
+        println!("delta_gk");
+        for g in relation.all_products() {
+            for k in relation.all_alternatives() {
+                print!("{}\t", self.delta_gk[g][k]);
+            }
+            println!("");
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn show_sigma_kl(&self, relation: &Relation) {
+        println!("sigma_kl");
+        for k in relation.all_alternatives() {
+            for l in relation.all_materials() {
+                print!("{}\t", self.sigma_kl[k][l]);
+            }
+            println!("");
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn show_FCM_j(&self, relation: &Relation) {
+        println!("FCM_j");
+        for j in relation.all_modules() {
+            print!("{}\t", self.FCM_j[j]);
         }
         println!("");
     }
