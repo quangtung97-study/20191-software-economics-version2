@@ -23,11 +23,9 @@ fn main() {
     mrgame.decision.input(&relation, &[true, true, false, true]);
     // mrgame.decision.show(&relation);
 
-    mrgame.parameter.input_A_g_c_m(
-        &relation,
-        &[3787.0, 3562.0, 0.0, 6200.0],
-        &[0.1721, 0.1830, 0.1403],
-    );
+    mrgame
+        .parameter
+        .input_A_g_c_m(&relation, &[3787.0, 3562.0, 0.0, 6200.0], &[0.1721, 0.1403]);
     mrgame
         .parameter
         .input_crm_s(&relation, &[0.1673, 0.4874, 0.3463]);
@@ -36,11 +34,7 @@ fn main() {
     let mut rrgame = RRGame::new(&relation);
     rrgame.parameter.input_p_mg(
         &relation,
-        &[
-            &[67.88, 61.02, 0.0, 55.72],
-            &[59.70, 69.76, 0.0, 0.0],
-            &[70.69, 0.0, 0.0, 63.57],
-        ],
+        &[&[67.88, 61.02, 0.0, 55.72], &[70.69, 0.0, 0.0, 63.57]],
     );
     rrgame.parameter.show_p_mg(&relation);
 
@@ -48,7 +42,6 @@ fn main() {
         &relation,
         &[
             &[1049.85, 2850.10, 0.0, 631.43],
-            &[357.29, 1681.27, 0.0, 0.0],
             &[2509.19, 0.0, 0.0, 1501.64],
         ],
     );
@@ -68,31 +61,35 @@ fn main() {
             println!("DP_{}{}: {}", retailer1.id, g.id, demand);
         }
 
-        // dp_NP
-        println!("dp_NP");
         for m in relation.initial_retailers() {
-            for j in relation.products(m, &mrgame.decision) {
-                print!("{}\t", computation::dp_NP(&input, m, j));
-            }
+            println!("TVR_constraint: {}", computation::TVR_constraint(&input, m));
+            println!("Ta_constraint: {}", computation::Ta_constraint(&input, m));
         }
-        println!("");
+        // dp_NP
+        // println!("dp_NP");
+        // for m in relation.initial_retailers() {
+        //     for j in relation.products(m, &mrgame.decision) {
+        //         print!("{}\t", computation::dp_NP(&input, m, j));
+        //     }
+        // }
+        // println!("");
 
         // da_NP
-        println!("da_NP");
-        for m in relation.initial_retailers() {
-            for j in relation.products(m, &mrgame.decision) {
-                print!("{}\t", computation::da_NP(&input, m, j));
-            }
-        }
-        println!("");
+        // println!("da_NP");
+        // for m in relation.initial_retailers() {
+        //     for j in relation.products(m, &mrgame.decision) {
+        //         print!("{}\t", computation::da_NP(&input, m, j));
+        //     }
+        // }
+        // println!("");
 
         // dpdp_NP
-        for m in relation.initial_retailers() {
-            for j in relation.products(m, &mrgame.decision) {
-                print!("{}\t", computation::dpdp_NP(&input, m, j, j));
-            }
-        }
-        println!("");
+        // for m in relation.initial_retailers() {
+        //     for j in relation.products(m, &mrgame.decision) {
+        //         print!("{}\t", computation::dpdp_NP(&input, m, j, j));
+        //     }
+        // }
+        // println!("");
 
         for m in relation.initial_retailers() {
             let profit = computation::NP(&input, m);

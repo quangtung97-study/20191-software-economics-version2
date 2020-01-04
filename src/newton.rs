@@ -1,7 +1,7 @@
 use ndarray::{Array1, Array2};
 use ndarray_linalg::Solve;
 
-const N: usize = 2;
+const N: usize = 3;
 
 #[allow(dead_code)]
 pub fn simple_newton_method(f: impl Fn(f64) -> f64, df: impl Fn(f64) -> f64, x0: f64) -> f64 {

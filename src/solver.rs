@@ -101,7 +101,6 @@ impl RRGameConstraints {
     }
 
     fn print(&self, lambdas: RRGameLambdas) {
-        println!("---------------------------------------");
         if self.TVR_active {
             println!("Lambda TVR: {}", lambdas.TVR);
         }
@@ -209,7 +208,6 @@ pub fn rrgame_f(
         }
         if constraints.Ta_active {
             result[index] -= lambdas.Ta * da_Ta_constraint(&input, m, *j);
-            // result[index] += lambdas.Ta;
         }
         index += 1;
     }
@@ -235,7 +233,7 @@ fn rrgame_solve_constraints(
     let x = newton::newton_method(&f, &x0, &dx0)?;
 
     let (parameter, lambdas) = rrgame_array_to_parameter(input, m, &x, constraints);
-    // constraints.print(lambdas);
+    constraints.print(lambdas);
 
     return constraints.accept_result(lambdas, parameter);
 }
@@ -258,17 +256,25 @@ fn rrgame_try_constraint(
             ..(*input.rrgame)
         };
 
-        let new_profit = {
+        let (cst1, cst2, new_profit) = {
             let new_input = Input {
                 rrgame: &rrgame,
                 ..(*input)
             };
-            computation::NP(&new_input, m)
+            (
+                computation::TVR_constraint(&new_input, m),
+                computation::Ta_constraint(&new_input, m),
+                computation::NP(&new_input, m),
+            )
         };
 
-        if new_profit > *profit {
+        println!("TVR constraint: {}", cst1);
+        println!("Ta constraint: {}", cst2);
+
+        let epsilon = 0.000001;
+        if new_profit > *profit && cst1 <= epsilon && cst2 <= epsilon {
             *profit = new_profit;
-            println!("new profit: {}", *profit);
+            println!("New profit: {}", *profit);
             return Some(rrgame.parameter);
         }
     }
@@ -281,9 +287,13 @@ pub fn rrgame_solve(input: &Input, m: Retailer) -> Option<rrgame::Parameter> {
     let mut profit = computation::NP(input, m);
 
     result = rrgame_try_constraint(result, input, m, &mut profit, false, false);
+    println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, true, false);
+    println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, false, true);
+    println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, true, true);
+    println!("----------------");
 
     result
 }
