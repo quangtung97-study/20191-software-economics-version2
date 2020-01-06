@@ -220,24 +220,24 @@ pub fn input() -> (Relation, Constant) {
 
     relation.material_alternative_pairs(&[
         (0, 0),
-        (0, 1),
-        (0, 2),
-        (0, 3),
         (1, 0),
+        (0, 1),
         (1, 1),
+        (0, 2),
+        (1, 2),
+        (0, 3),
         (1, 4),
-        (2, 2),
         (2, 5),
     ]);
 
     relation.alternative_product_pairs(&[
         (0, 0),
-        (1, 1),
-        (2, 2),
-        (2, 3),
         (3, 0),
-        (3, 2),
+        (1, 1),
         (4, 1),
+        (2, 2),
+        (3, 2),
+        (2, 3),
         (5, 3),
     ]);
 
@@ -284,7 +284,7 @@ pub fn input() -> (Relation, Constant) {
         &[
             &[2, 2, 0],
             &[1, 3, 0],
-            &[2, 0, 3],
+            &[2, 3, 0],
             &[1, 0, 0],
             &[0, 1, 0],
             &[0, 0, 1],
@@ -292,6 +292,7 @@ pub fn input() -> (Relation, Constant) {
     );
 
     constant.input_FCM_j(&relation, &[2000.0, 0.0]);
+    constant.input_HP_g(&relation, &[6.12, 4.9, 5.8, 5.7]);
 
     // constant.show_FCM_j(&relation);
     // constant.show_PCR_sl(&relation);

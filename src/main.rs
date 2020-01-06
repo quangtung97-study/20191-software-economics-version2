@@ -74,22 +74,17 @@ fn main() {
         // }
         // println!("");
 
-        // da_NP
-        // println!("da_NP");
-        // for m in relation.initial_retailers() {
-        //     for j in relation.products(m, &mrgame.decision) {
-        //         print!("{}\t", computation::da_NP(&input, m, j));
-        //     }
-        // }
-        // println!("");
+        println!("dA_NP0");
+        for j in relation.all_products() {
+            print!("{}\t", computation::dA_NP0(&input, j));
+        }
+        println!("");
 
-        // dpdp_NP
-        // for m in relation.initial_retailers() {
-        //     for j in relation.products(m, &mrgame.decision) {
-        //         print!("{}\t", computation::dpdp_NP(&input, m, j, j));
-        //     }
-        // }
-        // println!("");
+        println!("dA_NP0_approx");
+        for j in relation.all_products() {
+            print!("{}\t", computation::dA_NP0_approx(&input, j));
+        }
+        println!("");
 
         for m in relation.initial_retailers() {
             let profit = computation::NP(&input, m);
@@ -98,8 +93,8 @@ fn main() {
 
         println!("NP0 = {}", computation::NP0(&input));
         println!(
-            "NP0 constraint1 = {}",
-            computation::NP0_constraint1(&input, Material { id: 0 })
+            "NP0 BOM constraint = {}",
+            computation::NP0_bom_constraint(&input, Material { id: 0 })
         );
     }
 

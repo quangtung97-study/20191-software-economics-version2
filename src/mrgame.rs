@@ -2,11 +2,13 @@ use crate::relation::{Alternative, Module, Product};
 use crate::relation::{AlternativeMap, MaterialMap, ProductMap, Relation};
 use crate::relation::{RetailerMap, SupplierMap};
 
+#[derive(Clone)]
 pub struct Decision {
     pub product: ProductMap<bool>,
     pub alternative: AlternativeMap<bool>,
 }
 
+#[derive(Clone)]
 pub struct Parameter {
     pub A_g: ProductMap<f64>,
     pub c_m: RetailerMap<f64>,
@@ -15,6 +17,7 @@ pub struct Parameter {
     pub drm_sl: SupplierMap<MaterialMap<f64>>,
 }
 
+#[derive(Clone)]
 pub struct MRGame {
     pub decision: Decision,
     pub parameter: Parameter,

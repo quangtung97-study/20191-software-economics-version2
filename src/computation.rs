@@ -1,11 +1,13 @@
+pub mod comp_mrgame;
+
 use crate::mrgame::MRGame;
 use crate::relation::Alternative;
 use crate::relation::Constant;
-use crate::relation::Material;
 use crate::relation::Product;
 use crate::relation::Relation;
 use crate::relation::Retailer;
 use crate::rrgame::RRGame;
+pub use comp_mrgame::*;
 
 pub struct Input<'a, 'b, 'c, 'd> {
     pub relation: &'a Relation,
@@ -17,7 +19,7 @@ pub struct Input<'a, 'b, 'c, 'd> {
 fn safe_pow(a: f64, n: f64) -> f64 {
     if n == 0.0 {
         1.0
-    } else if a < 0.0 {
+    } else if a <= 0.0 {
         0.0
     } else {
         f64::powf(a, n)
@@ -77,129 +79,6 @@ pub fn NP(input: &Input, m: Retailer) -> f64 {
         sum -= DP(input, m, g) * pw(input, m, g);
         sum -= zeta_mg[m][g] * DP(input, m, g);
         sum -= a_mg[m][g];
-    }
-
-    sum
-}
-
-fn DA(input: &Input, k: Alternative) -> f64 {
-    let relation = input.relation;
-    let decision = &input.mrgame.decision;
-
-    let delta_gk = &input.constant.delta_gk;
-
-    let mut sum = 0.0;
-    for g in relation.products_for_alternative(k, &decision) {
-        for m in relation.retailers(g) {
-            sum += (delta_gk[g][k] as f64) * DP(input, m, g);
-        }
-    }
-
-    sum
-}
-
-pub fn NP0(input: &Input) -> f64 {
-    let relation = input.relation;
-    let decision = &input.mrgame.decision;
-
-    let c_m = &input.mrgame.parameter.c_m;
-    let HR_mg = &input.constant.HR_mg;
-    let zeta_mg = &input.constant.zeta_mg;
-    let TP_mg = &input.constant.TP_mg;
-    let PCP_g = &input.constant.PCP_g;
-    let ORM_s = &input.constant.ORM_s;
-    let HRM_l = &input.constant.HRM_l;
-    let PCA_k = &input.constant.PCA_k;
-    let PCR_sl = &input.constant.PCR_sl;
-    let FCM_j = &input.constant.FCM_j;
-    let FCA_k = &input.constant.FCA_k;
-
-    let crm_s = &input.mrgame.parameter.crm_s;
-    let drm_sl = &input.mrgame.parameter.drm_sl;
-    let A_g = &input.mrgame.parameter.A_g;
-
-    let mut sum = 0.0;
-
-    for m in relation.initial_retailers() {
-        for g in relation.products(m, decision) {
-            sum += DP(input, m, g) * pw(input, m, g);
-        }
-    }
-
-    sum -= {
-        let mut inner_sum = 0.0;
-
-        for m in relation.initial_retailers() {
-            for g in relation.products(m, decision) {
-                inner_sum += c_m[m] * DP(input, m, g) * HR_mg[m][g];
-                inner_sum -= zeta_mg[m][g] * DP(input, m, g);
-            }
-        }
-
-        inner_sum
-    };
-
-    sum -= {
-        let mut inner_sum = 0.0;
-        for s in relation.all_suppliers() {
-            inner_sum += ORM_s[s] / crm_s[s];
-
-            for l in relation.materials(s) {
-                inner_sum += crm_s[s] * drm_sl[s][l] * HRM_l[l] / 2.0;
-            }
-        }
-        inner_sum
-    };
-
-    for m in relation.initial_retailers() {
-        for g in relation.products(m, decision) {
-            sum -= DP(input, m, g) * TP_mg[m][g];
-            sum -= DP(input, m, g) * PCP_g[g];
-        }
-    }
-
-    for k in relation.all_alternatives() {
-        sum -= DA(input, k) * PCA_k[k];
-    }
-
-    for s in relation.all_suppliers() {
-        for l in relation.all_materials() {
-            sum -= drm_sl[s][l] * PCR_sl[s][l];
-        }
-    }
-    // println!("NP0 sum = {}", sum);
-
-    for g in relation.all_products() {
-        sum -= decision.fpp(g) * PCP_g[g];
-    }
-
-    for j in relation.all_modules() {
-        sum -= decision.fpm(relation, j) * FCM_j[j];
-    }
-
-    for k in relation.all_alternatives() {
-        sum -= decision.fpa(k) * FCA_k[k];
-    }
-
-    for g in relation.all_products() {
-        sum -= A_g[g];
-    }
-
-    sum
-}
-
-pub fn NP0_constraint1(input: &Input, l: Material) -> f64 {
-    let relation = input.relation;
-    let drm_sl = &input.mrgame.parameter.drm_sl;
-    let sigma_kl = &input.constant.sigma_kl;
-
-    let mut sum = 0.0;
-    for s in relation.all_suppliers() {
-        sum += drm_sl[s][l];
-    }
-
-    for k in relation.all_alternatives() {
-        sum -= sigma_kl[k][l] as f64 * DA(input, k);
     }
 
     sum

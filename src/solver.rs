@@ -1,3 +1,5 @@
+pub mod solver_mrgame;
+
 use crate::computation;
 use crate::computation::Input;
 use crate::newton;
@@ -9,6 +11,7 @@ use computation::{dp_NP, dp_TVR_constraint};
 use computation::{TVR_constraint, Ta_constraint};
 use ndarray::arr1;
 use ndarray::Array1;
+use solver_mrgame::*;
 
 #[derive(Copy, Clone)]
 pub struct RRGameConstraints {

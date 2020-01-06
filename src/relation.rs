@@ -377,6 +377,7 @@ pub struct Constant {
     pub delta_gk: ProductMap<AlternativeMap<usize>>,
     pub sigma_kl: AlternativeMap<MaterialMap<usize>>,
     pub FCM_j: ModuleMap<f64>,
+    pub HP_g: ProductMap<f64>,
 }
 
 impl Constant {
@@ -438,6 +439,7 @@ impl Constant {
             delta_gk: ProductMap::new(relation, AlternativeMap::new(relation, 0)),
             sigma_kl: AlternativeMap::new(relation, MaterialMap::new(relation, 0)),
             FCM_j: ModuleMap::new(relation, 0.0),
+            HP_g: ProductMap::new(relation, 0.0),
         }
     }
 
@@ -602,6 +604,12 @@ impl Constant {
     pub fn input_FCM_j(&mut self, relation: &Relation, data: &[f64]) {
         for j in relation.all_modules() {
             self.FCM_j[j] = data[j.id];
+        }
+    }
+
+    pub fn input_HP_g(&mut self, relation: &Relation, data: &[f64]) {
+        for g in relation.all_products() {
+            self.HP_g[g] = data[g.id];
         }
     }
 
@@ -849,6 +857,15 @@ impl Constant {
         println!("FCM_j");
         for j in relation.all_modules() {
             print!("{}\t", self.FCM_j[j]);
+        }
+        println!("");
+    }
+
+    #[allow(dead_code)]
+    pub fn show_HP_g(&self, relation: &Relation) {
+        println!("HP_g");
+        for g in relation.all_products() {
+            print!("{}\t", self.HP_g[g]);
         }
         println!("");
     }
