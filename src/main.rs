@@ -20,7 +20,7 @@ fn main() {
     let (relation, constant) = input::input();
     let mut mrgame = MRGame::new(&relation);
 
-    mrgame.decision.input(&relation, &[true, true, false, true]);
+    mrgame.decision.input(&relation, &[true, true, true, true]);
     // mrgame.decision.show(&relation);
 
     mrgame
@@ -65,14 +65,6 @@ fn main() {
             println!("TVR_constraint: {}", computation::TVR_constraint(&input, m));
             println!("Ta_constraint: {}", computation::Ta_constraint(&input, m));
         }
-        // dp_NP
-        // println!("dp_NP");
-        // for m in relation.initial_retailers() {
-        //     for j in relation.products(m, &mrgame.decision) {
-        //         print!("{}\t", computation::dp_NP(&input, m, j));
-        //     }
-        // }
-        // println!("");
 
         println!("dA_NP0");
         for j in relation.all_products() {
@@ -123,6 +115,51 @@ fn main() {
                 }
                 None => {}
             }
+        }
+    }
+
+    {
+        println!("======================================");
+        let input = computation::Input {
+            relation: &relation,
+            constant: &constant,
+            rrgame: &rrgame,
+            mrgame: &mrgame,
+        };
+
+        let constraints = solver::MRGameConstraints {};
+        let lambdas = solver::MRGameLambdas {};
+        let parameter = solver::mrgame_solve_constraints(&input, constraints);
+
+        for g in relation.all_products() {
+            print!("{}\t", input.mrgame.parameter.A_g[g]);
+        }
+        println!("");
+        println!("---------");
+        if let Some(parameter) = parameter {
+            for g in relation.all_products() {
+                print!("{}\t", parameter.A_g[g]);
+            }
+            println!("");
+
+            println!("Old NP0 = {}", computation::NP0(&input));
+            let decision = input.mrgame.decision.clone();
+            let mrgame = mrgame::MRGame {
+                parameter: parameter,
+                decision: decision,
+            };
+            let new_input = computation::Input {
+                mrgame: &mrgame,
+                ..input
+            };
+
+            println!("New NP0 = {}", computation::NP0(&new_input));
+
+            println!("dA_NP0");
+            for j in relation.all_products() {
+                print!("{}\t", computation::dA_NP0(&new_input, j));
+            }
+            println!("");
         }
     }
 }

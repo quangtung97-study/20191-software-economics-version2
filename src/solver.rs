@@ -11,7 +11,7 @@ use computation::{dp_NP, dp_TVR_constraint};
 use computation::{TVR_constraint, Ta_constraint};
 use ndarray::arr1;
 use ndarray::Array1;
-use solver_mrgame::*;
+pub use solver_mrgame::*;
 
 #[derive(Copy, Clone)]
 pub struct RRGameConstraints {
