@@ -233,7 +233,7 @@ fn rrgame_solve_constraints(
         .collect();
     let dx0 = arr1(&arr);
 
-    let x = newton::newton_method(&f, &x0, &dx0)?;
+    let x = newton::newton_method(&f, &x0, &dx0, 0.5, 10)?;
 
     let (parameter, lambdas) = rrgame_array_to_parameter(input, m, &x, constraints);
     constraints.print(lambdas);

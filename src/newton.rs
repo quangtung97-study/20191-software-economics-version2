@@ -1,7 +1,7 @@
 use ndarray::{Array1, Array2};
 use ndarray_linalg::Solve;
 
-const N: usize = 3;
+const N: usize = 10;
 
 #[allow(dead_code)]
 pub fn simple_newton_method(f: impl Fn(f64) -> f64, df: impl Fn(f64) -> f64, x0: f64) -> f64 {
@@ -30,6 +30,7 @@ pub fn jacobi(
         }
     }
 
+    // println!("{}", jmatrix);
     jmatrix
 }
 
@@ -38,22 +39,19 @@ pub fn newton_method(
     f: &impl Fn(&Array1<f64>) -> Array1<f64>,
     x0: &Array1<f64>,
     dx0: &Array1<f64>,
+    epsilon: f64,
+    iteration_count: usize,
 ) -> Option<Array1<f64>> {
     let mut x = x0.clone();
-    for _ in 0..N {
+    for _ in 0..iteration_count {
         let minus_fx = -f(&x);
         let jx = jacobi(f, &x, dx0);
         let dx = match jx.solve_into(minus_fx) {
             Ok(m) => m,
             Err(_) => return None,
         };
-        x = x + dx;
-
-        // for e in x.iter_mut() {
-        //     if *e < 0.0 {
-        //         *e = 0.0;
-        //     }
-        // }
+        x = x + epsilon * dx;
+        // println!("x: {}", x);
     }
 
     Some(x)

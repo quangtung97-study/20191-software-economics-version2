@@ -23,12 +23,22 @@ fn main() {
     mrgame.decision.input(&relation, &[true, true, true, true]);
     // mrgame.decision.show(&relation);
 
-    mrgame
-        .parameter
-        .input_A_g_c_m(&relation, &[3787.0, 3562.0, 0.0, 6200.0], &[0.1721, 0.1403]);
+    mrgame.parameter.input_A_g_c_m(
+        &relation,
+        &[3787.0, 3562.0, 1000.0, 6200.0],
+        &[0.1721, 0.1403],
+    );
     mrgame
         .parameter
         .input_crm_s(&relation, &[0.1673, 0.4874, 0.3463]);
+    mrgame.parameter.input_drm_sl(
+        &relation,
+        &[
+            &[2000.0, 1000.0, 3000.0],
+            &[2000.0, 0.0, 4000.0],
+            &[5000.0, 1500.0, 0.0],
+        ],
+    );
     mrgame.parameter.show(&relation);
 
     let mut rrgame = RRGame::new(&relation);
@@ -66,28 +76,33 @@ fn main() {
             println!("Ta_constraint: {}", computation::Ta_constraint(&input, m));
         }
 
-        println!("dA_NP0");
-        for j in relation.all_products() {
-            print!("{}\t", computation::dA_NP0(&input, j));
-        }
-        println!("");
-
-        println!("dA_NP0_approx");
-        for j in relation.all_products() {
-            print!("{}\t", computation::dA_NP0_approx(&input, j));
-        }
-        println!("");
-
         for m in relation.initial_retailers() {
             let profit = computation::NP(&input, m);
             println!("Profit: {}", profit);
         }
 
+        println!("dc_NP0");
+        for m in relation.initial_retailers() {
+            print!("{}\t", computation::dc_NP0(&input, m));
+        }
+        println!("");
+
+        println!("dc_NP0_approx");
+        for m in relation.initial_retailers() {
+            print!("{}\t", computation::dc_NP0_approx(&input, m));
+        }
+        println!("");
+
         println!("NP0 = {}", computation::NP0(&input));
         println!(
-            "NP0 BOM constraint = {}",
-            computation::NP0_bom_constraint(&input, Material { id: 0 })
+            "NP0 TVP constraint: {}",
+            computation::NP0_TVP_constraint(&input)
         );
+        println!("NP0 BOM constraint: ");
+        for l in relation.all_materials() {
+            print!("{}\t", computation::NP0_bom_constraint(&input, l));
+        }
+        println!("");
     }
 
     for _step in 0..2 {
@@ -128,17 +143,30 @@ fn main() {
         };
 
         let constraints = solver::MRGameConstraints {};
-        let lambdas = solver::MRGameLambdas {};
+        let lambdas = solver::MRGameLambdas::new(&relation);
         let parameter = solver::mrgame_solve_constraints(&input, constraints);
 
+        println!("Old A_g");
         for g in relation.all_products() {
             print!("{}\t", input.mrgame.parameter.A_g[g]);
         }
         println!("");
-        println!("---------");
         if let Some(parameter) = parameter {
+            println!("New A_g");
             for g in relation.all_products() {
                 print!("{}\t", parameter.A_g[g]);
+            }
+            println!("");
+
+            println!("New c_m");
+            for m in relation.initial_retailers() {
+                print!("{}\t", parameter.c_m[m]);
+            }
+            println!("");
+
+            println!("New crm_s");
+            for s in relation.all_suppliers() {
+                print!("{}\t", parameter.crm_s[s]);
             }
             println!("");
 

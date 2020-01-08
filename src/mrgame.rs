@@ -103,6 +103,15 @@ impl Parameter {
     }
 
     #[allow(dead_code)]
+    pub fn input_drm_sl(&mut self, relation: &Relation, data: &[&[f64]]) {
+        for s in relation.all_suppliers() {
+            for l in relation.all_materials() {
+                self.drm_sl[s][l] = data[s.id][l.id];
+            }
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn show(&self, relation: &Relation) {
         println!("A_g");
         for g in relation.all_products() {
@@ -119,6 +128,15 @@ impl Parameter {
         println!("crm_s");
         for s in relation.all_suppliers() {
             print!("{}\t", self.crm_s[s]);
+        }
+        println!("");
+
+        println!("drm_sl");
+        for s in relation.all_suppliers() {
+            for l in relation.materials(s) {
+                print!("{}\t", self.drm_sl[s][l]);
+            }
+            println!("");
         }
         println!("");
     }

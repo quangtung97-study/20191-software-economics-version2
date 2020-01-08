@@ -38,7 +38,7 @@ pub struct Relation {
     retailer_count: usize,
     alternative_count: usize,
     module_count: usize,
-    supplier_materials: Vec<(Supplier, Material)>,
+    pub supplier_materials: Vec<(Supplier, Material)>,
     retailer_products: Vec<(Retailer, Product)>,
     alternative_modules: Vec<(Alternative, Module)>,
     material_alternatives: Vec<(Material, Alternative)>,
@@ -131,6 +131,14 @@ impl Relation {
 
     pub fn all_materials(&self) -> impl Iterator<Item = Material> {
         (0..self.material_count).map(|id| Material { id })
+    }
+
+    pub fn suppliers_for_material(&self, l: Material) -> Vec<Supplier> {
+        self.supplier_materials
+            .iter()
+            .filter(|p| p.1.id == l.id)
+            .map(|p| p.0)
+            .collect()
     }
 
     pub fn all_alternatives(&self) -> impl Iterator<Item = Alternative> {
@@ -370,14 +378,18 @@ pub struct Constant {
     pub PCR_sl: SupplierMap<MaterialMap<f64>>,
 
     pub V_g: ProductMap<f64>,
+    pub w_0: f64,
     pub w_m: RetailerMap<f64>,
     pub TVR_m: RetailerMap<f64>,
     pub Ta_m: RetailerMap<f64>,
+    pub OP_m: RetailerMap<f64>,
 
     pub delta_gk: ProductMap<AlternativeMap<usize>>,
     pub sigma_kl: AlternativeMap<MaterialMap<usize>>,
     pub FCM_j: ModuleMap<f64>,
     pub HP_g: ProductMap<f64>,
+    pub VRM_l: MaterialMap<f64>,
+    pub TVP: f64,
 }
 
 impl Constant {
@@ -432,14 +444,18 @@ impl Constant {
             PCR_sl: SupplierMap::new(relation, MaterialMap::new(relation, 0.0)),
 
             V_g: ProductMap::new(relation, 1.0),
+            w_0: 1.0,
             w_m: RetailerMap::new(relation, 1.0),
             TVR_m: RetailerMap::new(relation, 0.0),
             Ta_m: RetailerMap::new(relation, 0.0),
+            OP_m: RetailerMap::new(relation, 0.0),
 
             delta_gk: ProductMap::new(relation, AlternativeMap::new(relation, 0)),
             sigma_kl: AlternativeMap::new(relation, MaterialMap::new(relation, 0)),
             FCM_j: ModuleMap::new(relation, 0.0),
             HP_g: ProductMap::new(relation, 0.0),
+            VRM_l: MaterialMap::new(relation, 1.0),
+            TVP: 3500.0,
         }
     }
 
@@ -582,6 +598,12 @@ impl Constant {
     pub fn input_Ta_m(&mut self, relation: &Relation, data: &[f64]) {
         for m in relation.initial_retailers() {
             self.Ta_m[m] = data[m.id];
+        }
+    }
+
+    pub fn input_OP_m(&mut self, relation: &Relation, data: &[f64]) {
+        for m in relation.initial_retailers() {
+            self.OP_m[m] = data[m.id];
         }
     }
 

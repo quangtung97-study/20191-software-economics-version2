@@ -266,8 +266,9 @@ pub fn input() -> (Relation, Constant) {
         &[&[0.9, 1.1, 1.4], &[1.0, inf, 1.2], &[1.1, 1.0, inf]],
     );
 
-    constant.input_TVR_m(&relation, &[240.0, 124.0]);
+    constant.input_TVR_m(&relation, &[260.0, 124.0]);
     constant.input_Ta_m(&relation, &[6000.38, 5000.83]);
+    constant.input_OP_m(&relation, &[200.0, 300.0]);
 
     constant.input_delta_gk(
         &relation,
