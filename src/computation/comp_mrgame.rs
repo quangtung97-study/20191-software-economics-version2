@@ -1,4 +1,5 @@
 use super::*;
+use crate::mrgame;
 use crate::relation::{Material, Supplier};
 
 fn DA(input: &Input, k: Alternative) -> f64 {
@@ -122,6 +123,18 @@ pub fn NP0_bom_constraint(input: &Input, l: Material) -> f64 {
 
     for k in relation.all_alternatives() {
         sum -= sigma_kl[k][l] as f64 * DA(input, k);
+    }
+
+    sum
+}
+
+pub fn demmand_for_material(input: &Input, l: Material) -> f64 {
+    let relation = input.relation;
+    let sigma_kl = &input.constant.sigma_kl;
+
+    let mut sum = 0.0;
+    for k in relation.all_alternatives() {
+        sum += sigma_kl[k][l] as f64 * DA(input, k);
     }
 
     sum
@@ -508,4 +521,54 @@ pub fn ddrm_NP0_TVP_constraint_approx(input: &Input, s: Supplier, l: Material) -
     };
 
     (NP0_TVP_constraint(&new_input) - NP0_TVP_constraint(input)) / 0.0001
+}
+
+pub fn drm_sl_coefficients(input: &Input, s: Supplier, l: Material) -> f64 {
+    let mut sum = 0.0;
+
+    let crm_s = &input.mrgame.parameter.crm_s;
+
+    let HRM_l = &input.constant.HRM_l;
+    let PCR_sl = &input.constant.PCR_sl;
+
+    sum -= crm_s[s] * HRM_l[l];
+    sum -= PCR_sl[s][l];
+
+    sum
+}
+
+pub fn find_best_supplier_for_material(input: &Input, l: Material) -> Supplier {
+    let suppliers = input.relation.suppliers_for_material(l);
+    let mut it = suppliers.iter();
+    let mut result = *it.next().unwrap();
+    let mut max = drm_sl_coefficients(input, result, l);
+
+    for s in it {
+        let value = drm_sl_coefficients(input, *s, l);
+        if max < value {
+            max = value;
+            result = *s;
+        }
+    }
+
+    result
+}
+
+pub fn apply_best_supplier_for_drm_sl(input: &Input) -> mrgame::Parameter {
+    let relation = input.relation;
+
+    let mut parameter = input.mrgame.parameter.clone();
+
+    for l in relation.all_materials() {
+        for s in relation.suppliers_for_material(l) {
+            parameter.drm_sl[s][l] = 0.0;
+        }
+    }
+
+    for l in relation.all_materials() {
+        let s = find_best_supplier_for_material(input, l);
+        parameter.drm_sl[s][l] = demmand_for_material(input, l);
+    }
+
+    parameter
 }

@@ -172,14 +172,38 @@ fn main() {
 
             println!("Old NP0 = {}", computation::NP0(&input));
             let decision = input.mrgame.decision.clone();
-            let mrgame = mrgame::MRGame {
+
+            let mut mrgame = mrgame::MRGame {
                 parameter: parameter,
                 decision: decision,
             };
+
+            mrgame.parameter = {
+                let new_input = computation::Input {
+                    mrgame: &mrgame,
+                    ..input
+                };
+                computation::apply_best_supplier_for_drm_sl(&new_input)
+            };
+
+            println!("New drm_sl");
+            for s in relation.all_suppliers() {
+                for l in relation.materials(s) {
+                    print!("{}\t", mrgame.parameter.drm_sl[s][l]);
+                }
+                println!("");
+            }
+
             let new_input = computation::Input {
                 mrgame: &mrgame,
                 ..input
             };
+
+            println!("NP0 BOM constraint: ");
+            for l in relation.all_materials() {
+                print!("{}\t", computation::NP0_bom_constraint(&new_input, l));
+            }
+            println!("");
 
             println!("New NP0 = {}", computation::NP0(&new_input));
 
