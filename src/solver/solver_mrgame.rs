@@ -151,7 +151,6 @@ pub fn mrgame_solve_constraints(
 
     let arr: Vec<f64> = (0..len).map(|_| 0.000001).collect();
     let dx0 = arr1(&arr);
-    println!("{}", x0);
 
     let x = newton::newton_method(&f, &x0, &dx0, 0.2, 20)?;
 

@@ -233,10 +233,10 @@ fn rrgame_solve_constraints(
         .collect();
     let dx0 = arr1(&arr);
 
-    let x = newton::newton_method(&f, &x0, &dx0, 0.5, 10)?;
+    let x = newton::newton_method(&f, &x0, &dx0, 0.2, 20)?;
 
     let (parameter, lambdas) = rrgame_array_to_parameter(input, m, &x, constraints);
-    constraints.print(lambdas);
+    // constraints.print(lambdas);
 
     return constraints.accept_result(lambdas, parameter);
 }
@@ -271,13 +271,13 @@ fn rrgame_try_constraint(
             )
         };
 
-        println!("TVR constraint: {}", cst1);
-        println!("Ta constraint: {}", cst2);
+        // println!("TVR constraint: {}", cst1);
+        // println!("Ta constraint: {}", cst2);
 
         let epsilon = 0.000001;
         if new_profit > *profit && cst1 <= epsilon && cst2 <= epsilon {
             *profit = new_profit;
-            println!("New profit: {}", *profit);
+            // println!("New profit: {}", *profit);
             return Some(rrgame.parameter);
         }
     }
@@ -290,13 +290,13 @@ pub fn rrgame_solve(input: &Input, m: Retailer) -> Option<rrgame::Parameter> {
     let mut profit = computation::NP(input, m);
 
     result = rrgame_try_constraint(result, input, m, &mut profit, false, false);
-    println!("----------------");
+    // println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, true, false);
-    println!("----------------");
+    // println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, false, true);
-    println!("----------------");
+    // println!("----------------");
     result = rrgame_try_constraint(result, input, m, &mut profit, true, true);
-    println!("----------------");
+    // println!("----------------");
 
     result
 }

@@ -105,9 +105,9 @@ fn main() {
         println!("");
     }
 
-    for _step in 0..2 {
+    println!("========================================================");
+    for _step in 0..8 {
         for m in relation.initial_retailers() {
-            println!("----------------------------------");
             let new_parameter = {
                 let input = computation::Input {
                     relation: &relation,
@@ -115,103 +115,89 @@ fn main() {
                     rrgame: &rrgame,
                     mrgame: &mrgame,
                 };
-                solver::rrgame_solve(&input, m)
+                solver::rrgame_solve(&input, m).unwrap()
             };
-            match new_parameter {
-                Some(new_parameter) => {
-                    println!("m: {}", m.id);
-                    new_parameter.show_p_mg(&relation);
-                    new_parameter.show_a_mg(&relation);
 
-                    for g in relation.products(m, &mrgame.decision) {
-                        rrgame.parameter.p_mg[m][g] = new_parameter.p_mg[m][g];
-                        rrgame.parameter.a_mg[m][g] = new_parameter.a_mg[m][g];
-                    }
-                }
-                None => {}
+            println!("m: {}", m.id);
+            new_parameter.show_p_mg(&relation);
+            new_parameter.show_a_mg(&relation);
+
+            for g in relation.products(m, &mrgame.decision) {
+                rrgame.parameter.p_mg[m][g] = new_parameter.p_mg[m][g];
+                rrgame.parameter.a_mg[m][g] = new_parameter.a_mg[m][g];
             }
+            println!("------------------------------------------");
         }
-    }
 
-    {
-        println!("======================================");
-        let input = computation::Input {
-            relation: &relation,
-            constant: &constant,
-            rrgame: &rrgame,
-            mrgame: &mrgame,
+        mrgame.parameter = {
+            let input = computation::Input {
+                relation: &relation,
+                constant: &constant,
+                rrgame: &rrgame,
+                mrgame: &mrgame,
+            };
+
+            let constraints = solver::MRGameConstraints {};
+            solver::mrgame_solve_constraints(&input, constraints).unwrap()
         };
 
-        let constraints = solver::MRGameConstraints {};
-        let lambdas = solver::MRGameLambdas::new(&relation);
-        let parameter = solver::mrgame_solve_constraints(&input, constraints);
-
-        println!("Old A_g");
+        println!("New A_g");
         for g in relation.all_products() {
-            print!("{}\t", input.mrgame.parameter.A_g[g]);
+            print!("{}\t", mrgame.parameter.A_g[g]);
         }
         println!("");
-        if let Some(parameter) = parameter {
-            println!("New A_g");
-            for g in relation.all_products() {
-                print!("{}\t", parameter.A_g[g]);
-            }
-            println!("");
 
-            println!("New c_m");
-            for m in relation.initial_retailers() {
-                print!("{}\t", parameter.c_m[m]);
-            }
-            println!("");
+        println!("New c_m");
+        for m in relation.initial_retailers() {
+            print!("{}\t", mrgame.parameter.c_m[m]);
+        }
+        println!("");
 
-            println!("New crm_s");
-            for s in relation.all_suppliers() {
-                print!("{}\t", parameter.crm_s[s]);
-            }
-            println!("");
+        println!("New crm_s");
+        for s in relation.all_suppliers() {
+            print!("{}\t", mrgame.parameter.crm_s[s]);
+        }
+        println!("");
 
-            println!("Old NP0 = {}", computation::NP0(&input));
-            let decision = input.mrgame.decision.clone();
-
-            let mut mrgame = mrgame::MRGame {
-                parameter: parameter,
-                decision: decision,
-            };
-
-            mrgame.parameter = {
-                let new_input = computation::Input {
-                    mrgame: &mrgame,
-                    ..input
-                };
-                computation::apply_best_supplier_for_drm_sl(&new_input)
-            };
-
-            println!("New drm_sl");
-            for s in relation.all_suppliers() {
-                for l in relation.materials(s) {
-                    print!("{}\t", mrgame.parameter.drm_sl[s][l]);
-                }
-                println!("");
-            }
-
-            let new_input = computation::Input {
+        mrgame.parameter = {
+            let input = computation::Input {
+                relation: &relation,
+                constant: &constant,
+                rrgame: &rrgame,
                 mrgame: &mrgame,
-                ..input
+            };
+            computation::apply_best_supplier_for_drm_sl(&input)
+        };
+
+        println!("New drm_sl");
+        for s in relation.all_suppliers() {
+            for l in relation.all_materials() {
+                print!("{}\t", mrgame.parameter.drm_sl[s][l]);
+            }
+            println!("");
+        }
+
+        {
+            let input = computation::Input {
+                relation: &relation,
+                constant: &constant,
+                rrgame: &rrgame,
+                mrgame: &mrgame,
             };
 
             println!("NP0 BOM constraint: ");
             for l in relation.all_materials() {
-                print!("{}\t", computation::NP0_bom_constraint(&new_input, l));
+                print!("{}\t", computation::NP0_bom_constraint(&input, l));
             }
             println!("");
 
-            println!("New NP0 = {}", computation::NP0(&new_input));
-
-            println!("dA_NP0");
-            for j in relation.all_products() {
-                print!("{}\t", computation::dA_NP0(&new_input, j));
+            for m in relation.initial_retailers() {
+                println!("NP{} = {}", m.id + 1, computation::NP(&input, m));
             }
-            println!("");
+
+            println!("NP0 = {}", computation::NP0(&input));
         }
+
+        println!("=============================================================");
     }
 }
